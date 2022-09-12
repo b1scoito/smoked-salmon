@@ -223,10 +223,17 @@ def generate_torrent(gazelle_site, path):
     click.secho(" done!", fg="yellow")
     return tpath, open(tpath, "rb")
 
-
+from datetime import datetime
 def generate_description(track_data, metadata):
     """Generate the group description with the tracklist and metadata source links."""
-    description = "[b][size=4]Tracklist[/b]\n"
+    description = "[b][artist]{}[/artist] - {}[/b]\n".format(
+        metadata["artists"][0][0], metadata["title"])
+    
+    try:
+        description += "{}\n\n".format(datetime.strptime(metadata['date'], '%Y-%m-%d').strftime('%A %d, %Y'))
+    except:
+        description += "\n"
+
     multi_disc = any(
         t["t"].discnumber and int(t["t"].discnumber) > 1 for t in track_data.values()
     )
@@ -245,16 +252,13 @@ def generate_description(track_data, metadata):
             )
 
         description += (
-            f'{", ".join(track["t"].artist)} - {track["t"].title} [i]({length})[/i]\n'
+            f'{track["t"].title} [i]({length})[/i]\n'
         )
 
     if len(track_data.values()) > 1:
         description += "\n[b]Total length: [/b]{}:{:02d}\n".format(
             total_duration // 60, total_duration % 60
         )
-
-    if metadata["comment"]:
-        description += f"\n{metadata['comment']}\n"
 
     if metadata["urls"]:
         description += "\n[b]More info:[/b] " + generate_source_links(metadata["urls"])
@@ -276,11 +280,11 @@ def generate_t_description(
     if not hybrid:
         track = next(iter(track_data.values()))
         if track["precision"]:
-            description += "Encode Specifics: {} bit {:.01f} kHz\n".format(
+            description += "Encode Specifics: {}bit/{:.01f}kHz\n".format(
                 track["precision"], track["sample rate"] / 1000
             )
         else:
-            description += "Encode Specifics: {:.01f} kHz\n".format(
+            description += "Encode Specifics: {:.01f}kHz\n".format(
                 track["sample rate"] / 1000
             )
 
@@ -303,6 +307,9 @@ def generate_t_description(
 
             description += "\n"
         description += "\n"
+
+    if metadata["comment"]:
+        description += f"\n{metadata['comment']}\n"
 
     if lossy_comment and config.LMA_COMMENT_IN_T_DESC:
         description += f"[u]Lossy Notes:[/u]\n{lossy_comment}\n\n"
@@ -330,3 +337,4 @@ def generate_source_links(metadata_urls):
     if config.ICONS_IN_DESCRIPTIONS:
         return " ".join(links)
     return " | ".join(links)
+
